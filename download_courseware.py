@@ -1,73 +1,100 @@
-# -*- coding:utf-8 -*-
+# -*- coding:utf8 -*-
 import requests
 import re
 from bs4 import BeautifulSoup
 import os
-
+import urllib
 
 # 下载课件
 def download(url, fileName, className, session):
     dir = os.getcwd() + "/" + className
     file = os.getcwd() + "/" + className + "/" + fileName
-    
     # 没有课程文件夹则创建
     if not os.path.exists(dir):
         os.mkdir(dir)
     # 存在该文件，返回
     if os.path.exists(file):
-        print(fileName + u"已存在，就不下载了")
+        print(fileName + "已存在，就不下载了")
         return
-    print(u"开始下载" + fileName + u"...")
+    print("开始下载" + fileName + u"...")
     s = session.get(url)
     with open(file, "wb") as data:
         data.write(s.content)
     
+def errorExit(msg):
+    print(msg)
+    os.system("pause")
+    exit()
 
+def getClass(currentClass, url, session, data):
+    if data != None:
+        s = session.post(url, data=data)
+    else:
+        s = session.get(url)
+    resourceList = BeautifulSoup(s.text, "html.parser").findAll("tr")
+    
+    for res in resourceList:
+        if res.find("td") == None:
+            continue
+        if res.find("h4") == None:
+            continue
+        
+        resUrl = res.find("h4").a.get("href")
+        
+        if resUrl == "#":
+            path = res.find("td", {"headers":"checkboxes"}).input.get("value")
+            data = {'source':'0', 'collectionId':path, 'navRoot':'', 'criteria':'', 'sakai_action':'doNavigate', 'rt_action':'', 'selectedItemId':'', 'resourceName':''}
+            # print (path)
+            urlNew = BeautifulSoup(s.text, "html.parser").find("form").get("action")
+            getClass(currentClass, urlNew, session, data)
+        else:
+            resName = resUrl.split("/")[-1]
+            download(resUrl, resName, currentClass, session)
 
 
 if __name__ == '__main__':
     
-    print("====================")
-    print("课件自动下载脚本 v0.1")
-    print("by libowei")
-    print("====================")
-    print("\n")
-    
+    print(u"=============================")
+    print(u"    课件自动下载脚本 v1.0")
+    print(u"        by libowei")
+    print(u"=============================")
     
     try:
-        config = open("user.config")
+        config = open("user.txt")
     except IOError:
-        print("请创建user.config文件")
-        exit()
+        errorExit("请创建user.txt文件")
         
-    line = config.readline().split(" ", 2)
-    username = line[0]
-    password = line[1]
+    try:
+        line = config.readline().split()
+        username = line[0]
+        password = line[1]             
+    except IndexError:
+        errorExit("user.txt文件格式不正确啊")
     
-    
-    print(u"您的登录名为：" + username)
-    flag = raw_input("是否继续?(y/n)")
+    print("您的登录名为：" + username)
+    flag = input("是否继续？(y/n)")
     if flag != "Y" and flag != "y":
         exit()
-    
     try:
-    
         session = requests.Session()
         s = session.get("http://sep.ucas.ac.cn/slogin?userName=" + username + "&pwd=" + password + "&sb=sb&rememberMe=1");
         bsObj = BeautifulSoup(s.text, "html.parser")
         nameTag = bsObj.find("li", {"class":"btnav-info", "title":"当前用户所在单位"})
-        name = nameTag.get_text().encode("utf-8")
-        # 正则提取出 单位 姓名
-        # 这个正则还有问题
-        match = re.compile(r"\s+(.+)\s+(.+)\s+(.+)").match(name)
+        if nameTag == None:
+            errorExit("登录失败，请核对用户名密码")
+        name = nameTag.get_text()
+        # 正则提取出 姓名 （单位还是提取不出来啊 不知道为啥）
+        match = re.compile(r"\s*(\S*)\s*(\S*)\s*").match(name)
+        print("\n")
         if(match):
-            print("登录成功,欢迎 " + match.group(3))
+            name = match.group(2)
+            print("欢迎您," + name)
         else:
-            print("登录失败，请核对用户名密码重启软件")
-            exit()
+            errorExit("登录失败，请核对用户名密码重启软件")
+        print(u"......................")
+        print(u"获取信息中，稍安勿躁....")
+        print(u"......................")
         
-        
-        print("获取信息中，稍安勿躁....")
     
         # 课程网站
         s = session.get("http://sep.ucas.ac.cn/portal/site/16/801")
@@ -98,8 +125,12 @@ if __name__ == '__main__':
             classTeacher = tdList[3].get_text().strip()  # 课程老师
             classList.append((classId, className, classWebsite, classTeacher));
         print("您已选" + str(len(classList)) + "门课：")
+        # 打印所有课程
         for c in classList:
             print(c[1] + "(" + c[3] + ")")
+            
+        print("\n")
+        print("开始下载课件......")
         for c in classList:
             url = c[2]
             s = session.get(url)
@@ -107,27 +138,9 @@ if __name__ == '__main__':
             url = BeautifulSoup(s.text, "html.parser").find("a", {"class", "icon-sakai-resources"}).get("href")
             s = session.get(url)
             url = BeautifulSoup(s.text, "html.parser").find("iframe").get("src")
-            s = session.get(url)
-            resourceList = BeautifulSoup(s.text, "html.parser").findAll("tr")
-            # 删除0 1 和最后一个元素
-            resourceList.pop()
-            del resourceList[0]
-            del resourceList[0]
-            if len(resourceList) <= 0:
-                print (u"课程" + c[1] + u"没有课件")
-            else:
-                print (u"课程" + c[1] + u"有" + str(len(resourceList)) + u"个课件")
-                for res in resourceList:
-                    resName = res.findAll("td")[2].get_text().strip()
-                    resUrl = res.a.get("href")
-                    download(resUrl, resName, c[1], session)
-    except Exception:
-        print("妈呀，出错了，请重启软件重试")
-        exit()
+            getClass(c[1], url, session, None)
+    except NameError:
+        errorExit("妈呀，出错了，请重启软件重试")
                 
-                
-                
-                
-            
-
-    
+    print("\n")
+    errorExit("课件下好了，滚去学习吧！\n")
