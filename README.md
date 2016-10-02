@@ -1,0 +1,2 @@
+# CoursewareDownload
+private
