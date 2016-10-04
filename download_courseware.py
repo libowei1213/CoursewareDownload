@@ -3,7 +3,6 @@ import requests
 import re
 from bs4 import BeautifulSoup
 import os
-import urllib
 
 # 下载课件
 def download(url, fileName, className, session):
