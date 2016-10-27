@@ -7,16 +7,27 @@
 2. 在脚本当前目录下建立以课程名命名的文件夹，下载课件到相应文件夹中
 3. 根据文件名判断课件是否已经下载，如课件已存在，则不进行下载
 
-# 使用说明
-脚本运行环境：python3，Windows
+## 脚本使用
+### Windows控制台下执行脚本
 
+脚本运行需要requests和bs4库，可用pip安装
+```
+pip install requests
+pip install bs4
+```
 
-修改user.txt文件，将第一行改为你的登录名和密码
+在脚本所在目录新建`user.txt`文件，将第一行改为你的登录名和密码（以空格分隔）
 
-
-windows控制台下执行命令
-
+在脚本所在目录按shift键+鼠标右键，选择"在此处打开命令窗口"，执行命令：
 ```
 python download_courseware.py
 ```
-# 
+
+### 运行exe可执行文件
+可下载`download_courseware.exe`文件
+
+
+在`download_courseware.exe`所在目录新建`user.txt`文件，将第一行改为你的登录名和密码（以空格分隔）
+
+
+双击运行程序 
