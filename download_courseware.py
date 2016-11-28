@@ -4,6 +4,7 @@ import re
 from bs4 import BeautifulSoup
 import os
 
+
 # 下载课件
 def download(url, fileName, className, session):
     dir = os.getcwd() + "/" + className
@@ -19,11 +20,13 @@ def download(url, fileName, className, session):
     s = session.get(url)
     with open(file, "wb") as data:
         data.write(s.content)
-    
+
+
 def errorExit(msg):
     print(msg)
     os.system("pause")
     exit()
+
 
 def getClass(currentClass, url, session, data):
     if data != None:
@@ -31,61 +34,74 @@ def getClass(currentClass, url, session, data):
     else:
         s = session.get(url)
     resourceList = BeautifulSoup(s.text, "html.parser").findAll("tr")
-    
+
     for res in resourceList:
         if res.find("td") == None:
             continue
         if res.find("h4") == None:
             continue
-        
+
         resUrl = res.find("h4").a.get("href")
-        
-        if resUrl == "#":
-            path = res.find("td", {"headers":"checkboxes"}).input.get("value")
-            data = {'source':'0', 'collectionId':path, 'navRoot':'', 'criteria':'', 'sakai_action':'doNavigate', 'rt_action':'', 'selectedItemId':'', 'resourceName':''}
+
+        # 文件夹
+        if res.find("h4").a.get("title") == "打开此文件夹":
+            path = res.find("td", {"headers": "checkboxes"}).input.get("value")
+            data = {'source': '0', 'collectionId': path, 'navRoot': '', 'criteria': '', 'sakai_action': 'doNavigate',
+                    'rt_action': '', 'selectedItemId': '', 'resourceName': ''}
             # print (path)
             urlNew = BeautifulSoup(s.text, "html.parser").find("form").get("action")
             getClass(currentClass, urlNew, session, data)
+        # 有版权的文件，构造下载链接
+        elif res.find("h4").a.get("href") == "#":
+            jsStr = res.find("h4").a.get("onclick")
+            reg=re.compile(r"openCopyrightWindow\('(.*)','copyright")
+            match=reg.match(jsStr)
+            if match:
+                resUrl=match.group(1)
+                resName = resUrl.split("/")[-1]
+                download(resUrl, resName, currentClass, session)
+        # 课件可以直接下载的
         else:
             resName = resUrl.split("/")[-1]
             download(resUrl, resName, currentClass, session)
 
 
 if __name__ == '__main__':
-    
+
     print(u"=============================")
     print(u"    课件自动下载脚本 v1.0")
     print(u"        by libowei")
     print(u"=============================")
-    
+
     try:
         config = open("user.txt")
     except IOError:
         errorExit("请创建user.txt文件")
-        
+
     try:
         line = config.readline().split()
         username = line[0]
-        password = line[1]             
+        password = line[1]
     except IndexError:
         errorExit("user.txt文件格式不正确啊")
-    
+
     print("您的登录名为：" + username)
     flag = input("是否继续？(y/n)")
     if flag != "Y" and flag != "y":
         exit()
     try:
         session = requests.Session()
-        s = session.get("http://sep.ucas.ac.cn/slogin?userName=" + username + "&pwd=" + password + "&sb=sb&rememberMe=1");
+        s = session.get(
+            "http://sep.ucas.ac.cn/slogin?userName=" + username + "&pwd=" + password + "&sb=sb&rememberMe=1");
         bsObj = BeautifulSoup(s.text, "html.parser")
-        nameTag = bsObj.find("li", {"class":"btnav-info", "title":"当前用户所在单位"})
+        nameTag = bsObj.find("li", {"class": "btnav-info", "title": "当前用户所在单位"})
         if nameTag == None:
             errorExit("登录失败，请核对用户名密码")
         name = nameTag.get_text()
         # 正则提取出 姓名 （单位还是提取不出来啊 不知道为啥）
         match = re.compile(r"\s*(\S*)\s*(\S*)\s*").match(name)
         print("\n")
-        if(match):
+        if (match):
             name = match.group(2)
             print("欢迎您," + name)
         else:
@@ -93,18 +109,17 @@ if __name__ == '__main__':
         print(u"......................")
         print(u"获取信息中，稍安勿躁....")
         print(u"......................")
-        
-    
+
         # 课程网站
         s = session.get("http://sep.ucas.ac.cn/portal/site/16/801")
         bsObj = BeautifulSoup(s.text, "html.parser")
-        
+
         newUrl = bsObj.find("noscript").meta.get("content")[6:]
         s = session.get((newUrl))
         bsObj = BeautifulSoup(s.text, "html.parser")
         newUrl = "http://course.ucas.ac.cn" + bsObj.find("frameset").findAll("frame")[0].get("src")
         s = session.get(newUrl)
-        bsObj = BeautifulSoup(s.text, "html.parser").find("a", {"class":"icon-sakai-membership"})
+        bsObj = BeautifulSoup(s.text, "html.parser").find("a", {"class": "icon-sakai-membership"})
         newUrl = bsObj.get("href")
         # 进入我的课程页面
         s = session.get(newUrl)
@@ -127,7 +142,7 @@ if __name__ == '__main__':
         # 打印所有课程
         for c in classList:
             print(c[1] + "(" + c[3] + ")")
-            
+
         print("\n")
         print("开始下载课件......")
         for c in classList:
@@ -138,8 +153,8 @@ if __name__ == '__main__':
             s = session.get(url)
             url = BeautifulSoup(s.text, "html.parser").find("iframe").get("src")
             getClass(c[1], url, session, None)
-    except NameError:
+    except Exception:
         errorExit("妈呀，出错了，请重启软件重试")
-                
+
     print("\n")
     errorExit("课件下好了，滚去学习吧！\n")
