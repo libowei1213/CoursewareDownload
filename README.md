@@ -32,7 +32,7 @@ python download_courseware.py 信息检索  #下载课程名包含"信息检索"
 python download_courseware.py 201M4006H #下载课程编号为201M4006H的课程的课件
 python download_courseware.py 王斌    #下载王斌老师的课程的课件
 python download_courseware.py   #不加参数，下载全部课件
-
+```
 
 ### 运行exe可执行文件
 可下载`download_courseware.exe`文件
