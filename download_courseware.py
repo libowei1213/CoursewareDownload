@@ -3,6 +3,7 @@ import requests
 import re
 from bs4 import BeautifulSoup
 import os
+import sys
 
 
 # 下载课件
@@ -142,6 +143,17 @@ if __name__ == '__main__':
         # 打印所有课程
         for c in classList:
             print(c[1] + "(" + c[3] + ")")
+
+        downloadClassList=[]
+        # 下载指定课程的课件
+        if len(sys.argv)>0:
+            selectedClass=sys.argv[1]
+            for c in classList:
+                if selectedClass in c[1] or selectedClass in c[0] or selectedClass in c[3]:
+                    downloadClassList.append(c)
+        if len(downloadClassList)>0:
+            classList=downloadClassList[:]
+            print("\n将要下载以下课程：\n%s"%("\n".join([c[1] for c in classList])))
 
         print("\n")
         print("开始下载课件......")
