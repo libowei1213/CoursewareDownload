@@ -55,10 +55,10 @@ def getClass(currentClass, url, session, data):
         # 有版权的文件，构造下载链接
         elif res.find("h4").a.get("href") == "#":
             jsStr = res.find("h4").a.get("onclick")
-            reg=re.compile(r"openCopyrightWindow\('(.*)','copyright")
-            match=reg.match(jsStr)
+            reg = re.compile(r"openCopyrightWindow\('(.*)','copyright")
+            match = reg.match(jsStr)
             if match:
-                resUrl=match.group(1)
+                resUrl = match.group(1)
                 resName = resUrl.split("/")[-1]
                 download(resUrl, resName, currentClass, session)
         # 课件可以直接下载的
@@ -79,6 +79,12 @@ if __name__ == '__main__':
     except IOError:
         errorExit("请创建user.txt文件")
 
+    # 删除验证码图片文件
+    try:
+        os.remove("captcha.png")
+    except IOError:
+        pass
+
     try:
         line = config.readline().split()
         username = line[0]
@@ -92,12 +98,23 @@ if __name__ == '__main__':
         exit()
     try:
         session = requests.Session()
+
+        session.get("http://sep.ucas.ac.cn/")
+        s = session.get("http://sep.ucas.ac.cn/changePic")
+        open("captcha.png", 'wb').write(s.content)
+
+        print("")
+        print("请查看当前路径下的 captcha.png 文件，输入验证码")
+        captcha = input("输入验证码：")
+        if len(captcha) != 4:
+            errorExit("验证码为四位")
+
         s = session.get(
-            "http://sep.ucas.ac.cn/slogin?userName=" + username + "&pwd=" + password + "&sb=sb&rememberMe=1");
+            "http://sep.ucas.ac.cn/slogin?userName=" + username + "&pwd=" + password + "&certCode=" + captcha + "&sb=sb&rememberMe=1");
         bsObj = BeautifulSoup(s.text, "html.parser")
         nameTag = bsObj.find("li", {"class": "btnav-info", "title": "当前用户所在单位"})
         if nameTag == None:
-            errorExit("登录失败，请核对用户名密码")
+            errorExit("登录失败，请核对用户名密码、验证码")
         name = nameTag.get_text()
         # 正则提取出 姓名 （单位还是提取不出来啊 不知道为啥）
         match = re.compile(r"\s*(\S*)\s*(\S*)\s*").match(name)
@@ -144,16 +161,16 @@ if __name__ == '__main__':
         for c in classList:
             print(c[1] + "(" + c[3] + ")")
 
-        downloadClassList=[]
+        downloadClassList = []
         # 下载指定课程的课件
-        if len(sys.argv)>0:
-            selectedClass=sys.argv[1]
+        if len(sys.argv) > 1:
+            selectedClass = sys.argv[1]
             for c in classList:
                 if selectedClass in c[1] or selectedClass in c[0] or selectedClass in c[3]:
                     downloadClassList.append(c)
-        if len(downloadClassList)>0:
-            classList=downloadClassList[:]
-            print("\n将要下载以下课程：\n%s"%("\n".join([c[1] for c in classList])))
+        if len(downloadClassList) > 0:
+            classList = downloadClassList[:]
+            print("\n将要下载以下课程：\n%s" % ("\n".join([c[1] for c in classList])))
 
         print("\n")
         print("开始下载课件......")
@@ -169,4 +186,5 @@ if __name__ == '__main__':
         errorExit("妈呀，出错了，请重启软件重试")
 
     print("\n")
+    os.remove("captcha.png")
     errorExit("课件下好了，滚去学习吧！\n")
