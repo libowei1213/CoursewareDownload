@@ -4,6 +4,7 @@ import re
 from bs4 import BeautifulSoup
 import os
 import sys
+import json
 
 
 # 下载课件
@@ -75,15 +76,9 @@ if __name__ == '__main__':
     print(u"=============================")
 
     try:
-        config = open("user.txt")
+        config = open("user.txt", encoding='utf-8')
     except IOError:
         errorExit("请创建user.txt文件")
-
-    # 删除验证码图片文件
-    try:
-        os.remove("captcha.png")
-    except IOError:
-        pass
 
     try:
         line = config.readline().split()
@@ -99,18 +94,22 @@ if __name__ == '__main__':
     try:
         session = requests.Session()
 
-        session.get("http://sep.ucas.ac.cn/")
-        s = session.get("http://sep.ucas.ac.cn/changePic")
-        open("captcha.png", 'wb').write(s.content)
+        session.get("http://onestop.ucas.ac.cn/home/index")
+        post = {'username': username, 'password': password, 'remember': 'checked'}
+        headers = {'Host': 'onestop.ucas.ac.cn', 'Referer': 'http://onestop.ucas.ac.cn/home/index',
+                   'X-Requested-With': 'XMLHttpRequest'}
+        s = session.post(
+            "http://onestop.ucas.ac.cn/Ajax/Login/0", data=post, headers=headers);
 
-        print("")
-        print("请查看当前路径下的 captcha.png 文件，输入验证码")
-        captcha = input("输入验证码：")
-        if len(captcha) != 4:
-            errorExit("验证码为四位")
+        if not "true" in s.text:
+            if "false" in s.text:
+                errorExit(json.loads(s.text)['msg'])
+            else:
+                errorExit(s.text)
 
-        s = session.get(
-            "http://sep.ucas.ac.cn/slogin?userName=" + username + "&pwd=" + password + "&certCode=" + captcha + "&sb=sb&rememberMe=1");
+        url = json.loads(s.text)['msg']
+        s = session.get(url)
+
         bsObj = BeautifulSoup(s.text, "html.parser")
         nameTag = bsObj.find("li", {"class": "btnav-info", "title": "当前用户所在单位"})
         if nameTag == None:
