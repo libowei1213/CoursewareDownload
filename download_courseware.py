@@ -185,5 +185,4 @@ if __name__ == '__main__':
         errorExit("妈呀，出错了，请重启软件重试")
 
     print("\n")
-    os.remove("captcha.png")
     errorExit("课件下好了，滚去学习吧！\n")
