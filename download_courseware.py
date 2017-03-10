@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 import os
 import sys
 import json
+import time
 
 
 # 下载课件
@@ -68,10 +69,55 @@ def getClass(currentClass, url, session, data):
             download(resUrl, resName, currentClass, session)
 
 
+def getClassList(session):
+    print("下载课程列表中....\n")
+
+    s = session.get("http://sep.ucas.ac.cn/portal/site/226/821")
+    bsObj = BeautifulSoup(s.text, "html.parser")
+
+    url = bsObj.find("noscript").meta.get("content")[6:]
+    s = session.get(url)
+    s = session.get('http://jwxk.ucas.ac.cn/course/termSchedule')
+    bsObj = BeautifulSoup(s.text, "html.parser")
+    classList = []
+    for tr in bsObj.find("tbody").findAll("tr"):
+        tds = tr.findAll("td")
+        if len(tds) < 5: continue
+        no = tds[1].a.get("href")[19:]
+        id = tds[1].get_text()
+        name = tds[2].get_text()
+        classList.append("%s|%s|%s\n" % (no, id, name))
+
+    with open("classes.txt", "w", encoding="utf-8") as file:
+        file.writelines(classList)
+
+
+def readClassList():
+    classList = []
+    with open("classes.txt", encoding="utf-8") as file:
+        for line in file:
+            classList.append(tuple(line.split('|')))
+    return classList
+
+
+def addCourseSite(session, id):
+    s = session.get("http://sep.ucas.ac.cn/portal/site/226/821")
+    bsObj = BeautifulSoup(s.text, "html.parser")
+
+    url = bsObj.find("noscript").meta.get("content")[6:]
+    s = session.get(url)
+
+    s = session.get("http://jwxk.ucas.ac.cn/courseManage/addCourseSite.json?courseId=%s&_=%s" % (id, time.time()))
+    if "加入课程网站成功" in s.text:
+        return 1
+    else:
+        return s.text
+
+
 if __name__ == '__main__':
 
     print(u"=============================")
-    print(u"    课件自动下载脚本 v1.0")
+    print(u"    课件自动下载脚本 v2.0")
     print(u"        by libowei")
     print(u"=============================")
 
@@ -126,6 +172,48 @@ if __name__ == '__main__':
         print(u"......................")
         print(u"获取信息中，稍安勿躁....")
         print(u"......................")
+
+        # 根据参数判断 是否为加入课程网站
+        if len(sys.argv) > 2:
+            if sys.argv[1] == "add":
+                # 不存在课程列表文件 则获取课程列表
+                if not os.path.exists("classes.txt"):
+                    getClassList(session)
+                classStr = sys.argv[2]
+                classList = readClassList()
+                addClassList = []
+                for c in classList:
+                    if classStr == c[0] or classStr == c[1] or classStr in c[2]:
+                        addClassList.append(c)
+
+                # 输入的课程不在课表中
+                if len(addClassList) <= 0:
+                    errorExit("本学期没有这门课啊！")
+                # 待选课程多于1个，需要用户选择一个
+                elif len(addClassList) > 1:
+                    print("找到%d门课：\n" % len(addClassList))
+                    classNo = []
+                    for c in addClassList:
+                        print("%s %s %s" % (c[0], c[1], c[2]))
+                        classNo.append(c[0])
+                    result = input("\n请输入要加入课程网站的课程的数字id：")
+                    if result in classNo:
+                        flag = addCourseSite(session, result)
+                        if flag == 1:
+                            errorExit("加入课程网站成功\n")
+                        else:
+                            errorExit(flag)
+                    else:
+                        errorExit("输入错误！\n")
+                # 待选课程为1 直接加入课程网站
+                else:
+                    flag = addCourseSite(session, addClassList[0][0])
+                    if flag == 1:
+                        errorExit("加入课程网站成功\n")
+                    else:
+                        errorExit(flag)
+            else:
+                errorExit("输入参数错误")
 
         # 课程网站
         s = session.get("http://sep.ucas.ac.cn/portal/site/16/801")
