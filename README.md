@@ -42,16 +42,16 @@ python download_courseware.py   #不加参数，下载全部课件
 执行以下命令，可将指定课程加入课程网站
 
 ```
-python download_courseware add xxx
+python download_courseware.py add xxx
 ```
 
 ```
 python download_courseware.py add 自然语言处理    # 指定课程名称
 python download_courseware.py add 201M4005H     # 指定课程编号
 python download_courseware.py add 131957        # 指定课程数字ID
-···
+```
 
-使用课程名称时，课程名为模糊匹配，如有多个课程，请根据脚本指示进一步选择。
+使用课程名称时，课程名为模糊匹配。如有多个课程，请根据脚本指示进一步选择。
 
 ## 更新日志
 - 2016.11.28 有些课件有“版权限制下载警告”的提示，如*091M5026H 并发数据与多核编程*的部分ppt，不能直接下载，导致脚本死循环，已修复
