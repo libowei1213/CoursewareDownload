@@ -59,3 +59,4 @@ python download_courseware.py add 131957        # 指定课程数字ID
 - 2017.02.20 课程网站登录时需要验证码。现需要用户在脚本中输入4位验证码。
 - 2017.03.07 更改登录接口，不需要验证码。([http://onestop.ucas.ac.cn/home/index](http://onestop.ucas.ac.cn/home/index))
 - 2017.03.10 新增：将指定课程加入课程网站 
+- 2017.03.28 修复一个错误

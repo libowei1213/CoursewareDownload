@@ -1,4 +1,3 @@
-# -*- coding:utf8 -*-
 import requests
 import re
 from bs4 import BeautifulSoup
@@ -139,13 +138,17 @@ if __name__ == '__main__':
         exit()
     try:
         session = requests.Session()
-
         session.get("http://onestop.ucas.ac.cn/home/index")
         post = {'username': username, 'password': password, 'remember': 'checked'}
-        headers = {'Host': 'onestop.ucas.ac.cn', 'Referer': 'http://onestop.ucas.ac.cn/home/index',
-                   'X-Requested-With': 'XMLHttpRequest'}
+        headers = {'Host': 'onestop.ucas.ac.cn',
+                   'Referer': 'http://onestop.ucas.ac.cn/home/index',
+                   'X-Requested-With': 'XMLHttpRequest',
+                   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:52.0) Gecko/20100101 Firefox/52.0'
+                   }
         s = session.post(
             "http://onestop.ucas.ac.cn/Ajax/Login/0", data=post, headers=headers);
+
+        # print(s.text)
 
         if not "true" in s.text:
             if "false" in s.text:
