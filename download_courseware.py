@@ -76,16 +76,21 @@ def getClassList(session):
 
     url = bsObj.find("noscript").meta.get("content")[6:]
     s = session.get(url)
-    s = session.get('http://jwxk.ucas.ac.cn/course/termSchedule')
-    bsObj = BeautifulSoup(s.text, "html.parser")
+	
     classList = []
-    for tr in bsObj.find("tbody").findAll("tr"):
-        tds = tr.findAll("td")
-        if len(tds) < 5: continue
-        no = tds[1].a.get("href")[19:]
-        id = tds[1].get_text()
-        name = tds[2].get_text()
-        classList.append("%s|%s|%s\n" % (no, id, name))
+    termsId=['49346','49345','49344']
+    for term in termsId:
+        post={'termId':term,'courseAttribute':'','isSummer':''}
+        s = session.post('http://jwxk.ucas.ac.cn/course/termSchedule',data=post)
+        bsObj = BeautifulSoup(s.text, "html.parser")
+    
+        for tr in bsObj.find("tbody").findAll("tr"):
+            tds = tr.findAll("td")
+            if len(tds) < 5: continue
+            no = tds[1].a.get("href")[19:]
+            id = tds[1].get_text()
+            name = tds[2].get_text()
+            classList.append("%s|%s|%s\n" % (no, id, name))
 
     with open("classes.txt", "w", encoding="utf-8") as file:
         file.writelines(classList)
@@ -272,7 +277,7 @@ if __name__ == '__main__':
             s = session.get(url)
             url = BeautifulSoup(s.text, "html.parser").find("iframe").get("src")
             getClass(c[1], url, session, None)
-    except Exception:
+    except NameError:
         errorExit("妈呀，出错了，请重启软件重试")
 
     print("\n")
