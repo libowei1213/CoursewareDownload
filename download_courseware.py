@@ -1,3 +1,5 @@
+#coding=utf-8
+
 import requests
 import re
 from bs4 import BeautifulSoup
@@ -5,10 +7,12 @@ import os
 import sys
 import json
 import time
-
+import pdb
 
 # 下载课件
 def download(url, fileName, className, session):
+    # \xa0转gbk会有错
+    fileName = fileName.replace(u"\xa0"," ").replace(u"\xc2","")
     dir = os.getcwd() + "/" + className
     file = os.getcwd() + "/" + className + "/" + fileName
     # 没有课程文件夹则创建
@@ -16,9 +20,9 @@ def download(url, fileName, className, session):
         os.mkdir(dir)
     # 存在该文件，返回
     if os.path.exists(file):
-        print(fileName + "已存在，就不下载了")
+        print("%s已存在，就不下载了" % fileName)
         return
-    print("开始下载" + fileName + u"...")
+    print("开始下载%s..." % fileName)
     s = session.get(url)
     with open(file, "wb") as data:
         data.write(s.content)
@@ -120,10 +124,10 @@ def addCourseSite(session, id):
 
 if __name__ == '__main__':
 
-    print(u"=============================")
-    print(u"    课件自动下载脚本 v2.0")
-    print(u"        by libowei")
-    print(u"=============================")
+    print("=============================")
+    print("    课件自动下载脚本 v2.0")
+    print("        by libowei")
+    print("=============================")
 
     try:
         config = open("user.txt", encoding='utf-8')
@@ -137,7 +141,7 @@ if __name__ == '__main__':
     except IndexError:
         errorExit("user.txt文件格式不正确啊")
 
-    print("您的登录名为：" + username)
+    print("您的登录名为：%s" % username)
     flag = input("是否继续？(y/n)")
     if flag != "Y" and flag != "y":
         exit()
@@ -173,13 +177,14 @@ if __name__ == '__main__':
         match = re.compile(r"\s*(\S*)\s*(\S*)\s*").match(name)
         print("\n")
         if (match):
-            name = match.group(2)
-            print("欢迎您," + name)
+            org = match.group(1).replace("\xc2","").replace("\x80","").replace("\x90","").strip()
+            name = match.group(2).replace("\xc2","").replace("\x80","").replace("\x90","").strip()
+            print("欢迎您！%s，%s" % (org,name))
         else:
             errorExit("登录失败，请核对用户名密码重启软件")
-        print(u"......................")
-        print(u"获取信息中，稍安勿躁....")
-        print(u"......................")
+        print("......................")
+        print("获取信息中，稍安勿躁....")
+        print("......................")
 
         # 根据参数判断 是否为加入课程网站
         if len(sys.argv) > 2:
@@ -251,7 +256,7 @@ if __name__ == '__main__':
             classWebsite = tdList[2].h4.a.get("href")  # 课程url
             classTeacher = tdList[3].get_text().strip()  # 课程老师
             classList.append((classId, className, classWebsite, classTeacher));
-        print("您已选" + str(len(classList)) + "门课：")
+        print("您已选%s门课：" % str(len(classList)))
         # 打印所有课程
         for c in classList:
             print(c[1] + "(" + c[3] + ")")
@@ -277,8 +282,8 @@ if __name__ == '__main__':
             s = session.get(url)
             url = BeautifulSoup(s.text, "html.parser").find("iframe").get("src")
             getClass(c[1], url, session, None)
-    except NameError:
-        errorExit("妈呀，出错了，请重启软件重试")
+    except Exception as e:
+        errorExit("妈呀，出错了，错误信息: %s" % e)
 
     print("\n")
     errorExit("课件下好了，滚去学习吧！\n")
