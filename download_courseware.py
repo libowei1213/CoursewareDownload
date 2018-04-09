@@ -1,4 +1,4 @@
-#coding=utf-8
+# coding=utf-8
 
 import requests
 import re
@@ -7,12 +7,17 @@ import os
 import sys
 import json
 import time
-import pdb
+import time
+
 
 # 下载课件
 def download(url, fileName, className, session):
     # \xa0转gbk会有错
-    fileName = fileName.replace(u"\xa0"," ").replace(u"\xc2","")
+    fileName = fileName.replace(u"\xa0", " ").replace(u"\xc2", "")
+    # 去掉不合法的文件名字符
+    fileName = re.sub(r"[/\\:*\"<>|?]", "", fileName)
+    className = re.sub(r"[/\\:*\"<>|?]", "", className)
+
     dir = os.getcwd() + "/" + className
     file = os.getcwd() + "/" + className + "/" + fileName
     # 没有课程文件夹则创建
@@ -73,6 +78,16 @@ def getClass(currentClass, url, session, data):
 
 
 def getClassList(session):
+    filename = "classes.txt"
+
+    if os.path.exists(filename):
+        # 课程列表文件更新时间大于十天，重新下载
+        timestamp = os.path.getmtime(filename)
+        if time.time() - timestamp < 10 * 24 * 3600:
+            return
+        else:
+            os.remove(filename)
+
     print("下载课程列表中....\n")
 
     s = session.get("http://sep.ucas.ac.cn/portal/site/226/821")
@@ -80,21 +95,27 @@ def getClassList(session):
 
     url = bsObj.find("noscript").meta.get("content")[6:]
     s = session.get(url)
-	
+
+    terms = {}
+    s = session.get('http://jwxk.ucas.ac.cn/course/termSchedule')
+    soup = BeautifulSoup(s.text, "html.parser").find("select", {'name': 'termId'}).findAll("option")[:3]
+    for option in soup:
+        terms[option.get("value")] = option.get_text()
+
     classList = []
-    termsId=['49346','49345','49344']
-    for term in termsId:
-        post={'termId':term,'courseAttribute':'','isSummer':''}
-        s = session.post('http://jwxk.ucas.ac.cn/course/termSchedule',data=post)
+    for termId, termName in terms.items():
+        post = {'termId': termId, 'courseAttribute': '', 'isSummer': ''}
+        s = session.post('http://jwxk.ucas.ac.cn/course/termSchedule', data=post)
         bsObj = BeautifulSoup(s.text, "html.parser")
-    
+
         for tr in bsObj.find("tbody").findAll("tr"):
             tds = tr.findAll("td")
             if len(tds) < 5: continue
             no = tds[1].a.get("href")[19:]
             id = tds[1].get_text()
             name = tds[2].get_text()
-            classList.append("%s|%s|%s\n" % (no, id, name))
+            teacher = tds[14].get_text()
+            classList.append("%s|%s|%s|%s|%s\n" % (no, id, name, teacher, termName))
 
     with open("classes.txt", "w", encoding="utf-8") as file:
         file.writelines(classList)
@@ -177,9 +198,9 @@ if __name__ == '__main__':
         match = re.compile(r"\s*(\S*)\s*(\S*)\s*").match(name)
         print("\n")
         if (match):
-            org = match.group(1).replace("\xc2","").replace("\x80","").replace("\x90","").strip()
-            name = match.group(2).replace("\xc2","").replace("\x80","").replace("\x90","").strip()
-            print("欢迎您！%s，%s" % (org,name))
+            org = match.group(1).replace("\xc2", "").replace("\x80", "").replace("\x90", "").strip()
+            name = match.group(2).replace("\xc2", "").replace("\x80", "").replace("\x90", "").strip()
+            print("欢迎您！%s，%s" % (org, name))
         else:
             errorExit("登录失败，请核对用户名密码重启软件")
         print("......................")
@@ -189,9 +210,7 @@ if __name__ == '__main__':
         # 根据参数判断 是否为加入课程网站
         if len(sys.argv) > 2:
             if sys.argv[1] == "add":
-                # 不存在课程列表文件 则获取课程列表
-                if not os.path.exists("classes.txt"):
-                    getClassList(session)
+                getClassList(session)
                 classStr = sys.argv[2]
                 classList = readClassList()
                 addClassList = []
@@ -207,7 +226,7 @@ if __name__ == '__main__':
                     print("找到%d门课：\n" % len(addClassList))
                     classNo = []
                     for c in addClassList:
-                        print("%s %s %s" % (c[0], c[1], c[2]))
+                        print("%s %s %s %s %s" % (c[0], c[1], c[2], c[3], c[4]))
                         classNo.append(c[0])
                     result = input("\n请输入要加入课程网站的课程的数字id：")
                     if result in classNo:
